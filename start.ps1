@@ -31,12 +31,13 @@ if (-not (Test-Path $venvPython)) {
 }
 
 $backendJob = Start-Job -ScriptBlock {
-    param($path, $python)
     param($backendPath, $python)
     Set-Location $backendPath
+    & $python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 } -ArgumentList $backendPath, $venvPython
 
-Start-Sleep -Seconds 2
+Write-Host "⏳ Waiting for backend to start..." -ForegroundColor Cyan
+Start-Sleep -Seconds 3
 
 # Start frontend
 Write-Host "🚀 Starting Frontend (React + Vite)..." -ForegroundColor Cyan

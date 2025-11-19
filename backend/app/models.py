@@ -20,7 +20,7 @@ class JoinRequest(BaseModel):
     name: str
 
 class JoinResponse(BaseModel):
-    participant_id: str
+    username: str
 
 class AnswerRequest(BaseModel):
     participant_id: str

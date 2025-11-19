@@ -1,5 +1,4 @@
 # Test comment: File editing is working correctly
-import uuid
 import os
 from datetime import datetime, timezone
 from typing import List, Dict, Optional
@@ -175,26 +174,24 @@ async def startup_event():
 async def join(req: JoinRequest):
     name = req.name.strip()
     if not name:
-        raise HTTPException(status_code=422, detail="Name cannot be empty")
+        raise HTTPException(status_code=422, detail="Username cannot be empty")
 
-    # Check for duplicate names (case-insensitive)
-    name_lower = name.lower()
-    for existing_data in quiz_state.participants.values():
-        if existing_data["name"].lower() == name_lower:
-            raise HTTPException(status_code=409, detail="This name is already taken. Please choose a different name.")
+    # Check if username already exists (case-sensitive)
+    if name in quiz_state.participants:
+        raise HTTPException(status_code=409, detail="This username is already in use. Please choose a different one.")
 
-    pid = str(uuid.uuid4())
-    quiz_state.participants[pid] = {"name": name[:40]}
+    # Store participant with username as key
+    quiz_state.participants[name] = {"name": name[:40]}
     save_state()
     await broadcast_state()
-    return JoinResponse(participant_id=pid)
+    return JoinResponse(username=name)
 
-@app.get("/participant/{participant_id}")
-async def participant_exists(participant_id: str):
-    if participant_id in quiz_state.participants:
+@app.get("/participant/{username}")
+async def participant_exists(username: str):
+    if username in quiz_state.participants:
         return {
             "status": "ok",
-            "name": quiz_state.participants[participant_id]["name"]
+            "name": quiz_state.participants[username]["name"]
         }
     raise HTTPException(status_code=404, detail="Participant not found")
 
@@ -221,14 +218,14 @@ async def submit_answer(req: AnswerRequest):
     save_state()
     return {"status": "ok"}
 
-@app.get("/answer_status/{participant_id}/{question_id}")
-async def answer_status(participant_id: str, question_id: int):
-    if participant_id not in quiz_state.participants:
+@app.get("/answer_status/{username}/{question_id}")
+async def answer_status(username: str, question_id: int):
+    if username not in quiz_state.participants:
         raise HTTPException(status_code=404, detail="Participant not found")
     question = next((q for q in quiz_state.QUIZ if q.id == question_id), None)
     if not question:
         raise HTTPException(status_code=404, detail="Question not found")
-    key = (participant_id, question_id)
+    key = (username, question_id)
     if key in quiz_state.answers:
         return {"status": "ok", "answered": True, "option_index": quiz_state.answers[key]}
     return {"status": "ok", "answered": False, "option_index": None}

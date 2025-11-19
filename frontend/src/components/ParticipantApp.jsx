@@ -4,49 +4,19 @@ import { theme } from "../theme.js";
 import Button from "./ui/Button.jsx";
 import Badge from "./ui/Badge.jsx";
 import Card from "./ui/Card.jsx";
-import { Skeleton } from "./ui/Skeleton.jsx";
 
 export default function ParticipantApp() {
-  const [participantId, setParticipantId] = useState(() => localStorage.getItem("participant_id") || "");
-  const [name, setName] = useState("");
+  const [username, setUsername] = useState("");
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [joining, setJoining] = useState(false);
   const [joinError, setJoinError] = useState("");
   const [state, setState] = useState(null);
   const [selectedOption, setSelectedOption] = useState(null);
   const [wsStatus, setWsStatus] = useState("disconnected");
   const [imageError, setImageError] = useState(false);
-  const [validated, setValidated] = useState(false);
 
   useEffect(() => {
-    const validate = async () => {
-      if (!participantId) { setValidated(true); return; }
-      try {
-        const res = await fetch(`${API_BASE}/participant/${participantId}`);
-        if (!res.ok) {
-          localStorage.removeItem("participant_id");
-          setParticipantId("");
-          setName("");
-        } else {
-          // Retrieve participant name from backend
-          const data = await res.json();
-          if (data.name) {
-            setName(data.name);
-          }
-        }
-      } catch {
-        // On error, clear participant_id
-        localStorage.removeItem("participant_id");
-        setParticipantId("");
-        setName("");
-      } finally {
-        setValidated(true);
-      }
-    };
-    validate();
-  }, [participantId]);
-
-  useEffect(() => {
-    if (!participantId) return;
+    if (!isLoggedIn || !username) return;
     const ws = new WebSocket(makeWsUrl());
     ws.onopen = () => setWsStatus("connected");
     ws.onmessage = (event) => {
@@ -58,13 +28,13 @@ export default function ParticipantApp() {
     };
     ws.onclose = () => setWsStatus("disconnected");
     return () => ws.close();
-  }, [participantId]);
+  }, [isLoggedIn, username]);
 
   useEffect(() => {
     const checkExistingAnswer = async () => {
-      if (!state?.question || !participantId) { setSelectedOption(null); return; }
+      if (!state?.question || !username || !isLoggedIn) { setSelectedOption(null); return; }
       try {
-        const res = await fetch(`${API_BASE}/answer_status/${participantId}/${state.question.id}`);
+        const res = await fetch(`${API_BASE}/answer_status/${encodeURIComponent(username)}/${state.question.id}`);
         if (res.ok) {
           const data = await res.json();
           setSelectedOption(data.answered ? data.option_index : null);
@@ -72,11 +42,11 @@ export default function ParticipantApp() {
       } catch { setSelectedOption(null); }
     };
     checkExistingAnswer();
-  }, [state?.question?.id, participantId]);
+  }, [state?.question?.id, username, isLoggedIn]);
 
   const join = async (e) => {
     e.preventDefault();
-    if (!name.trim()) return;
+    if (!username.trim()) return;
     setJoining(true);
     setJoinError("");
 
@@ -84,14 +54,14 @@ export default function ParticipantApp() {
       const res = await fetch(`${API_BASE}/join`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name })
+        body: JSON.stringify({ name: username.trim() })
       });
 
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
         if (res.status === 409) {
-          // Duplicate name
-          setJoinError(data.detail || "This name is already taken. Please choose a different name.");
+          // Username already in use
+          setJoinError(data.detail || "This username is already in use. Please choose a different one.");
         } else {
           setJoinError(data.detail || "Failed to join. Please try again.");
         }
@@ -99,11 +69,10 @@ export default function ParticipantApp() {
         return;
       }
 
-      const data = await res.json();
+      await res.json();
       setJoining(false);
-      localStorage.setItem("participant_id", data.participant_id);
-      setParticipantId(data.participant_id);
-    } catch (error) {
+      setIsLoggedIn(true);
+    } catch {
       setJoining(false);
       setJoinError("Network error. Please check your connection and try again.");
     }
@@ -112,33 +81,24 @@ export default function ParticipantApp() {
   const remainingSeconds = state?.remaining_seconds ?? null;
 
   const submitAnswer = async (idx) => {
-    if (!state?.question || !participantId) return;
+    if (!state?.question || !username || !isLoggedIn) return;
     if (selectedOption !== null) return;
     if (remainingSeconds !== null && remainingSeconds <= 0) return;
     setSelectedOption(idx);
-    const res = await fetch(`${API_BASE}/answer`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ participant_id: participantId, question_id: state.question.id, option_index: idx }) });
+    const res = await fetch(`${API_BASE}/answer`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ participant_id: username, question_id: state.question.id, option_index: idx }) });
     const data = await res.json();
     if (data.status === 'error') {
       setSelectedOption(null);
     }
   };
 
-  if (!validated) {
-    return (
-      <div style={{ padding: theme.spacing.xl, maxWidth: '640px', margin: '0 auto' }}>
-        <Skeleton height="2rem" width="60%" />
-        <Skeleton height="1rem" width="40%" style={{ marginTop: theme.spacing.md }} />
-      </div>
-    );
-  }
-
-  if (!participantId) {
+  if (!isLoggedIn) {
     return (
       <div style={{ maxWidth: '480px', margin: '2rem auto', padding: theme.spacing.xl }}>
         <Card variant="gradient" padding="xl">
           <h1 style={{ marginTop: 0, textAlign: 'center' }}>Join the Quiz</h1>
           <p style={{ textAlign: 'center', color: theme.colors.neutral[600], marginBottom: theme.spacing.xl }}>
-            Enter your name to participate
+            Enter your username to participate
           </p>
 
           {joinError && (
@@ -161,13 +121,13 @@ export default function ParticipantApp() {
 
           <form onSubmit={join}>
             <input
-              value={name}
+              value={username}
               onChange={e => {
-                setName(e.target.value);
+                setUsername(e.target.value);
                 setJoinError(""); // Clear error when user types
               }}
-              placeholder="Your name"
-              aria-label="Enter your name"
+              placeholder="Your username"
+              aria-label="Enter your username"
               required
               autoFocus
               style={{
@@ -185,7 +145,7 @@ export default function ParticipantApp() {
             />
             <Button
               type='submit'
-              disabled={joining || !name.trim()}
+              disabled={joining || !username.trim()}
               loading={joining}
               size="lg"
               style={{ width: '100%' }}
@@ -239,7 +199,7 @@ export default function ParticipantApp() {
             Check the scoreboard on the big screen 🏆
           </p>
           <div style={{ marginTop: theme.spacing.lg, fontSize: theme.fontSizes.sm, color: theme.colors.neutral[500] }}>
-            Thanks for playing, {name}!
+            Thanks for playing, {username}!
           </div>
         </Card>
       </div>
@@ -284,7 +244,7 @@ export default function ParticipantApp() {
             {wsStatus === 'connected' ? '🟢' : '🔴'}
           </Badge>
           <span style={{ fontSize: theme.fontSizes.sm, color: theme.colors.neutral[600] }}>
-            You: <strong>{name || '(anonymous)'}</strong>
+            You: <strong>{username || '(anonymous)'}</strong>
           </span>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: theme.spacing.sm }}>

@@ -98,6 +98,7 @@ def make_public_state() -> PublicState:
             correct_index=None,
             image_url=q.image_url,
             time_limit_seconds=q.time_limit_seconds,
+            translations=q.translations,
         )
     return PublicState(
         state=quiz_state.state,
@@ -361,4 +362,3 @@ async def websocket_endpoint(websocket: WebSocket):
             await websocket.receive_text()
     except WebSocketDisconnect:
         await manager.disconnect(websocket)
-

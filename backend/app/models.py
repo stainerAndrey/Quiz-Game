@@ -1,5 +1,10 @@
 from pydantic import BaseModel
-from typing import List, Optional
+from typing import Dict, List, Optional
+
+class QuestionTranslation(BaseModel):
+    text: str
+    options: List[str]
+    image_url: Optional[str] = None
 
 class Question(BaseModel):
     id: int
@@ -8,6 +13,7 @@ class Question(BaseModel):
     correct_index: Optional[int] = None
     image_url: Optional[str] = None  # existing field
     time_limit_seconds: Optional[int] = None  # NEW: per-question time limit override
+    translations: Optional[Dict[str, QuestionTranslation]] = None
 
 class QuizState(BaseModel):
     current_question_index: int
@@ -59,4 +65,3 @@ class ParticipantStatus(BaseModel):
 
 class ParticipantsStatusResponse(BaseModel):
     participants: List[ParticipantStatus]
-

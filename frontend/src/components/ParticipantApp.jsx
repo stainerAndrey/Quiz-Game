@@ -1,11 +1,14 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { API_BASE, makeWsUrl } from "../api.js";
 import { theme } from "../theme.js";
 import Button from "./ui/Button.jsx";
 import Badge from "./ui/Badge.jsx";
 import Card from "./ui/Card.jsx";
+import { useI18n, localizeQuestion } from "../i18n.jsx";
+import LanguageSelector from "./ui/LanguageSelector.jsx";
 
 export default function ParticipantApp() {
+  const { language, t } = useI18n();
   const [username, setUsername] = useState("");
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [joining, setJoining] = useState(false);
@@ -14,6 +17,15 @@ export default function ParticipantApp() {
   const [selectedOption, setSelectedOption] = useState(null);
   const [wsStatus, setWsStatus] = useState("disconnected");
   const [imageError, setImageError] = useState(false);
+  const localizedQuestion = useMemo(
+    () => localizeQuestion(state?.question, language),
+    [state?.question, language]
+  );
+  const languageSelector = (
+    <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: theme.spacing.md }}>
+      <LanguageSelector />
+    </div>
+  );
 
   useEffect(() => {
     if (!isLoggedIn || !username) return;
@@ -60,10 +72,9 @@ export default function ParticipantApp() {
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
         if (res.status === 409) {
-          // Username already in use
-          setJoinError(data.detail || "This username is already in use. Please choose a different one.");
+          setJoinError(data.detail || t("join_error_taken"));
         } else {
-          setJoinError(data.detail || "Failed to join. Please try again.");
+          setJoinError(data.detail || t("join_error_generic"));
         }
         setJoining(false);
         return;
@@ -74,7 +85,7 @@ export default function ParticipantApp() {
       setIsLoggedIn(true);
     } catch {
       setJoining(false);
-      setJoinError("Network error. Please check your connection and try again.");
+      setJoinError(t("join_error_network"));
     }
   };
 
@@ -95,10 +106,11 @@ export default function ParticipantApp() {
   if (!isLoggedIn) {
     return (
       <div style={{ maxWidth: '480px', margin: '2rem auto', padding: theme.spacing.xl }}>
+        {languageSelector}
         <Card variant="gradient" padding="xl">
-          <h1 style={{ marginTop: 0, textAlign: 'center' }}>Join the Quiz</h1>
+          <h1 style={{ marginTop: 0, textAlign: 'center' }}>{t("join_title")}</h1>
           <p style={{ textAlign: 'center', color: theme.colors.neutral[600], marginBottom: theme.spacing.xl }}>
-            Enter your username to participate
+            {t("join_subtitle")}
           </p>
 
           {joinError && (
@@ -126,8 +138,8 @@ export default function ParticipantApp() {
                 setUsername(e.target.value);
                 setJoinError(""); // Clear error when user types
               }}
-              placeholder="Your username"
-              aria-label="Enter your username"
+              placeholder={t("username_placeholder")}
+              aria-label={t("username_placeholder")}
               required
               autoFocus
               style={{
@@ -150,7 +162,7 @@ export default function ParticipantApp() {
               size="lg"
               style={{ width: '100%' }}
             >
-              {joining ? 'Joining...' : 'Join Quiz'}
+              {joining ? t("joining_button") : t("join_button")}
             </Button>
           </form>
         </Card>
@@ -161,12 +173,13 @@ export default function ParticipantApp() {
   if (!state) {
     return (
       <div style={{ maxWidth: '640px', margin: '2rem auto', padding: theme.spacing.xl, textAlign: 'center' }}>
+        {languageSelector}
         <Card variant="gradient" padding="xl">
           <div style={{ fontSize: '3rem', marginBottom: theme.spacing.lg }}>⏳</div>
-          <h2 style={{ marginTop: 0 }}>Waiting for quiz to start...</h2>
+          <h2 style={{ marginTop: 0 }}>{t("waiting_start_title")}</h2>
           <div style={{ marginTop: theme.spacing.lg }}>
             <Badge variant={wsStatus === 'connected' ? 'success' : 'danger'}>
-              {wsStatus === 'connected' ? '🟢 Connected' : '🔴 Connecting...'}
+              {wsStatus === 'connected' ? `🟢 ${t("status_connected")}` : `🔴 ${t("status_connecting")}`}
             </Badge>
           </div>
         </Card>
@@ -177,9 +190,10 @@ export default function ParticipantApp() {
   if (state.state.is_finished) {
     return (
       <div style={{ maxWidth: '640px', margin: '2rem auto', padding: theme.spacing.xl }}>
+        {languageSelector}
         <Card variant="gradient" padding="xl" style={{ textAlign: 'center' }}>
           <div style={{ fontSize: '4rem', marginBottom: theme.spacing.lg }}>🎉</div>
-          <h1 style={{ marginTop: 0 }}>Quiz Finished!</h1>
+          <h1 style={{ marginTop: 0 }}>{t("quiz_finished_title")}</h1>
           {state.final_image_url && (
             <div style={{ margin: `${theme.spacing.xl} 0` }}>
               <img
@@ -196,26 +210,27 @@ export default function ParticipantApp() {
             </div>
           )}
           <p style={{ fontSize: theme.fontSizes.lg, color: theme.colors.neutral[700] }}>
-            Check the scoreboard on the big screen 🏆
+            {t("quiz_finished_cta")}
           </p>
           <div style={{ marginTop: theme.spacing.lg, fontSize: theme.fontSizes.sm, color: theme.colors.neutral[500] }}>
-            Thanks for playing, {username}!
+            {t("quiz_finished_thanks", { name: username || t("anonymous_user") })}
           </div>
         </Card>
       </div>
     );
   }
 
-  const q = state.question;
+  const q = localizedQuestion;
   const currentIndex = state.state.current_question_index;
   const totalQuestions = state.total_questions;
 
   if (!q) {
     return (
       <div style={{ maxWidth: '640px', margin: '2rem auto', padding: theme.spacing.xl, textAlign: 'center' }}>
+        {languageSelector}
         <Card variant="gradient" padding="xl">
           <div style={{ fontSize: '3rem', marginBottom: theme.spacing.lg }}>📝</div>
-          <h2>Waiting for the first question...</h2>
+          <h2>{t("waiting_question_title")}</h2>
         </Card>
       </div>
     );
@@ -231,6 +246,7 @@ export default function ParticipantApp() {
 
   return (
     <div style={{ maxWidth: 640, margin: '0 auto', padding: 'clamp(0.75rem, 2vw, 1rem)' }}>
+      {languageSelector}
       <div style={{
         marginBottom: theme.spacing.lg,
         display: 'flex',
@@ -240,20 +256,26 @@ export default function ParticipantApp() {
         gap: theme.spacing.sm,
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: theme.spacing.sm }}>
-          <Badge variant={wsStatus === 'connected' ? 'success' : 'danger'} size="sm">
+          <Badge
+            variant={wsStatus === 'connected' ? 'success' : 'danger'}
+            size="sm"
+            title={wsStatus === 'connected' ? t("status_connected") : t("status_connecting")}
+          >
             {wsStatus === 'connected' ? '🟢' : '🔴'}
           </Badge>
           <span style={{ fontSize: theme.fontSizes.sm, color: theme.colors.neutral[600] }}>
-            You: <strong>{username || '(anonymous)'}</strong>
+            {t("you_label")} <strong>{username || t("anonymous_user")}</strong>
           </span>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: theme.spacing.sm }}>
           <Badge variant="default">
-            Question {currentIndex + 1} of {totalQuestions}
+            {t("question_progress", { current: currentIndex + 1, total: totalQuestions })}
           </Badge>
           {remainingSeconds !== null && (
             <Badge variant={getTimerVariant()}>
-              {remainingSeconds > 0 ? `⏱ ${remainingSeconds}s` : '⏱ Time up'}
+              {remainingSeconds > 0
+                ? t("timer_running", { seconds: remainingSeconds })
+                : t("timer_up")}
             </Badge>
           )}
         </div>
@@ -264,7 +286,7 @@ export default function ParticipantApp() {
           <div style={{ textAlign: 'center', marginBottom: theme.spacing.lg }}>
             <img
               src={q.image_url}
-              alt='Question illustration'
+              alt={t("question_image_alt")}
               style={{
                 maxWidth: '100%',
                 maxHeight: 240,
@@ -286,7 +308,7 @@ export default function ParticipantApp() {
             background: theme.colors.neutral[50],
             borderRadius: theme.radii.md,
           }}>
-            📷 Image unavailable
+            {t("image_unavailable")}
           </div>
         )}
 
@@ -316,7 +338,7 @@ export default function ParticipantApp() {
                   onClick={() => submitAnswer(idx)}
                   disabled={isDisabled}
                   aria-pressed={isSelected}
-                  aria-label={`Option ${idx + 1}: ${opt}`}
+                  aria-label={t("option_aria_label", { index: idx + 1, text: opt })}
                   style={{
                     width: '100%',
                     padding: theme.spacing.lg,
@@ -363,7 +385,7 @@ export default function ParticipantApp() {
               textAlign: 'center',
             }}
           >
-            ✅ Answer locked: {q.options[selectedOption]}
+            {t("answer_locked", { answer: q.options[selectedOption] })}
           </div>
         )}
 
@@ -381,11 +403,10 @@ export default function ParticipantApp() {
               textAlign: 'center',
             }}
           >
-            ⏱ Time expired for this question
+            {t("time_expired")}
           </div>
         )}
       </Card>
     </div>
   );
 }
-

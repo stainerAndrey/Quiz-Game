@@ -1,0 +1,11 @@
+{
+  "participants": {},
+  "answers": [],
+  "quiz_state": {
+    "current_question_index": -1,
+    "reveal_answer": false,
+    "is_finished": false,
+    "question_started_at": null,
+    "question_time_limit": null
+  }
+}

@@ -6,14 +6,26 @@
       "text": "What is the capital of France?",
       "options": ["Berlin", "Madrid", "Paris", "Rome"],
       "correct_index": 2,
-      "image_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/1/15/Paris_from_the_Arc_de_Triomphe%2C_17_October_2019.jpg/640px-Paris_from_the_Arc_de_Triomphe%2C_17_October_2019.jpg"
+      "image_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/1/15/Paris_from_the_Arc_de_Triomphe%2C_17_October_2019.jpg/640px-Paris_from_the_Arc_de_Triomphe%2C_17_October_2019.jpg",
+      "translations": {
+        "ru": {
+          "text": "Какова столица Франции?",
+          "options": ["Берлин", "Мадрид", "Париж", "Рим"]
+        }
+      }
     },
     {
       "id": 2,
       "text": "Which language is most commonly used with React on the web?",
       "options": ["Python", "JavaScript/TypeScript", "Go", "Rust"],
       "correct_index": 1,
-      "image_url": "https://upload.wikimedia.org/wikipedia/commons/a/a7/React-icon.svg"
+      "image_url": "https://upload.wikimedia.org/wikipedia/commons/a/a7/React-icon.svg",
+      "translations": {
+        "ru": {
+          "text": "Какой язык чаще всего используют с React в веб-разработке?",
+          "options": ["Python", "JavaScript/TypeScript", "Go", "Rust"]
+        }
+      }
     },
     {
       "id": 3,
@@ -25,8 +37,31 @@
         "Cool Styling Stuff"
       ],
       "correct_index": 1,
-      "image_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/a/ab/Official_CSS_Logo.svg/640px-Official_CSS_Logo.svg.png"
+      "image_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/a/ab/Official_CSS_Logo.svg/640px-Official_CSS_Logo.svg.png",
+      "translations": {
+        "ru": {
+          "text": "Как расшифровывается CSS?",
+          "options": [
+            "Counter Style Sheet",
+            "Cascading Style Sheets",
+            "Computer Style System",
+            "Cool Styling Stuff"
+          ]
+        }
+      }
+    },
+    {
+      "id": 4,
+      "text": "Is the kitty a goofball?",
+      "options": ["Yes", "Of course", "My goofball", "Such a goofball!"],
+      "correct_index": 2,
+      "image_url": "https://scontent.ftlv1-1.fna.fbcdn.net/v/t39.30808-6/516507674_3232362490273630_7262963780985063158_n.jpg?stp=cp6_dst-jpg_tt6&_nc_cat=111&ccb=1-7&_nc_sid=6ee11a&_nc_ohc=mDkPLHvc_cEQ7kNvwFOScFb&_nc_oc=AdmosbDp714RCWJuxqLUoHjCKLyc3iZ_Nt6fvrkb9f6AgCAkM7jqgm3QEB9CxydZaST9TKxuRubIFsNWfbQyKmnA&_nc_zt=23&_nc_ht=scontent.ftlv1-1.fna&_nc_gid=r-mFL7UjC_kHy0Dd2RhNVw&oh=00_Afiysh4hYMnnJK0mDMf1UV1yZLRKXdUbOS0cxfQ9acNnbA&oe=6923F531",
+      "translations": {
+        "ru": {
+          "text": "Котик дурачок?",
+          "options": ["Да", "Конечно", "Мой дурачок", "О, дурачок!"]
+        }
+      }
     }
   ]
 }
-

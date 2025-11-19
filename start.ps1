@@ -15,25 +15,25 @@ if (-not $LOCAL_IP) {
 
 Write-Host ""
 Write-Host "📝 Make sure you've set up the environment:" -ForegroundColor Yellow
-Write-Host "   1. Backend: cd backend; python -m venv venv; .\venv\Scripts\Activate; pip install -r requirements.txt"
-Write-Host "   2. Frontend: cd frontend; npm install"
+Write-Host "   1. Run setup.ps1 to install all dependencies"
+Write-Host "   2. (Optional) Create frontend\.env.local with: VITE_API_BASE=http://$($LOCAL_IP):8000"
 Write-Host "   3. Create frontend\.env.local with: VITE_API_BASE=http://$($LOCAL_IP):8000"
 Write-Host ""
 
 # Start backend
-Write-Host "🚀 Starting Backend (FastAPI)..." -ForegroundColor Cyan
-$backendPath = Join-Path $PSScriptRoot "backend"
-$venvPython = Join-Path $backendPath "venv\Scripts\python.exe"
+$rootPath = $PSScriptRoot
+$backendPath = Join-Path $rootPath "backend"
+$venvPython = Join-Path $rootPath "venv\Scripts\python.exe"
 
 if (-not (Test-Path $venvPython)) {
-    Write-Host "❌ Virtual environment not found. Run: python -m venv venv" -ForegroundColor Red
-    exit 1
+    Write-Host "❌ Virtual environment not found at $venvPython" -ForegroundColor Red
+    Write-Host "   Please run: .\setup.ps1" -ForegroundColor Yellow
 }
 
 $backendJob = Start-Job -ScriptBlock {
     param($path, $python)
-    Set-Location $path
-    & $python -m uvicorn app.main:app --host 0.0.0.0 --port 8000
+    param($backendPath, $python)
+    Set-Location $backendPath
 } -ArgumentList $backendPath, $venvPython
 
 Start-Sleep -Seconds 2

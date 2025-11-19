@@ -1,0 +1,25 @@
+[tool.poetry]
+name = "quiz-game-backend"
+version = "0.1.0"
+description = "Real-time Quiz Game Backend"
+authors = ["Your Name <you@example.com>"]
+readme = "README.md"
+packages = [{include = "app", from = "backend"}]
+
+[tool.poetry.dependencies]
+python = "^3.9"
+fastapi = "^0.115.0"
+uvicorn = {extras = ["standard"], version = "^0.32.0"}
+pydantic = "^2.10.0"
+websockets = "^14.1"
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^8.3.0"
+pytest-asyncio = "^0.24.0"
+black = "^24.10.0"
+flake8 = "^7.1.0"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+

@@ -1,0 +1,32 @@
+{
+  "final_image_url": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTgVUVUOf8KhqELeGFx6MNDaXN_4ANjPCu2Sw&s",
+  "questions": [
+    {
+      "id": 1,
+      "text": "What is the capital of France?",
+      "options": ["Berlin", "Madrid", "Paris", "Rome"],
+      "correct_index": 2,
+      "image_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/1/15/Paris_from_the_Arc_de_Triomphe%2C_17_October_2019.jpg/640px-Paris_from_the_Arc_de_Triomphe%2C_17_October_2019.jpg"
+    },
+    {
+      "id": 2,
+      "text": "Which language is most commonly used with React on the web?",
+      "options": ["Python", "JavaScript/TypeScript", "Go", "Rust"],
+      "correct_index": 1,
+      "image_url": "https://upload.wikimedia.org/wikipedia/commons/a/a7/React-icon.svg"
+    },
+    {
+      "id": 3,
+      "text": "What does CSS stand for?",
+      "options": [
+        "Counter Style Sheet",
+        "Cascading Style Sheets",
+        "Computer Style System",
+        "Cool Styling Stuff"
+      ],
+      "correct_index": 1,
+      "image_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/a/ab/Official_CSS_Logo.svg/640px-Official_CSS_Logo.svg.png"
+    }
+  ]
+}
+

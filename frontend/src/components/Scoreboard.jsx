@@ -33,34 +33,6 @@ export default function Scoreboard() {
     load();
   }, []);
 
-  const getPodiumStyle = (rank) => {
-    const styles = {
-      1: {
-        background: 'linear-gradient(135deg, #fef3c7 0%, #fde68a 100%)',
-        border: '2px solid #f59e0b',
-        fontSize: '1.1rem',
-        fontWeight: 700,
-        boxShadow: theme.shadows.lg,
-      },
-      2: {
-        background: 'linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%)',
-        border: '2px solid #9ca3af',
-        boxShadow: theme.shadows.md,
-      },
-      3: {
-        background: 'linear-gradient(135deg, #ffe4e6 0%, #fecdd3 100%)',
-        border: '2px solid #fb7185',
-        boxShadow: theme.shadows.md,
-      },
-    };
-    return styles[rank] || {};
-  };
-
-  const getMedal = (rank) => {
-    const medals = { 1: '🥇', 2: '🥈', 3: '🥉' };
-    return medals[rank] || `${rank}.`;
-  };
-
   if (loading && entries.length === 0 && !error) {
     return (
       <div style={{ marginTop: theme.spacing.lg }}>
@@ -98,93 +70,199 @@ export default function Scoreboard() {
     );
   }
 
+  const totalPlayers = entries.length;
+  const averageScore = totalPlayers
+    ? Math.round((entries.reduce((sum, entry) => sum + entry.percentage, 0) / totalPlayers) * 10) / 10
+    : 0;
+  const perfectPlayers = entries.filter((entry) => entry.correct === entry.total_questions).length;
+  const podium = entries.slice(0, 3);
+  const rest = entries.slice(3);
+
   return (
-    <div style={{ marginTop: theme.spacing.lg }}>
+    <section
+      style={{
+        width: '100%',
+        marginTop: theme.spacing.xl,
+        background: 'linear-gradient(135deg, #eef2ff 0%, #fdf2f8 100%)',
+        borderRadius: theme.radii.xl,
+        padding: 'clamp(1rem, 1.5vw, 2rem)',
+        boxShadow: theme.shadows.lg,
+        boxSizing: 'border-box',
+        overflow: 'hidden',
+      }}>
       <div style={{
         display: 'flex',
         justifyContent: 'space-between',
         alignItems: 'center',
+        flexWrap: 'wrap',
+        gap: theme.spacing.lg,
         marginBottom: theme.spacing.xl,
       }}>
-        <h2 style={{
-          margin: 0,
-          background: 'linear-gradient(135deg, #2563eb 0%, #7c3aed 100%)',
-          WebkitBackgroundClip: 'text',
-          WebkitTextFillColor: 'transparent',
-          backgroundClip: 'text',
-        }}>
-          🏆 Final Scores
-        </h2>
+        <div>
+          <h2 style={{
+            margin: 0,
+            fontSize: theme.fontSizes['2xl'],
+            color: theme.colors.neutral[900],
+          }}>
+            🏆 Final Scores
+          </h2>
+          <p style={{ margin: 0, color: theme.colors.neutral[600], fontSize: theme.fontSizes.sm }}>
+            {totalPlayers} players · Avg accuracy {averageScore}% · Perfect runs {perfectPlayers}
+          </p>
+        </div>
         <Button onClick={load} size="sm" variant="secondary" disabled={loading}>
           {loading ? 'Loading...' : 'Refresh'}
         </Button>
       </div>
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: theme.spacing.md }}>
-        {entries.map((entry, idx) => (
-          <div
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: podium.length > 1 ? 'repeat(auto-fit, minmax(200px, 1fr))' : '1fr',
+          gap: theme.spacing.md,
+          marginBottom: rest.length ? theme.spacing.sm : 0,
+        }}
+      >
+        {podium.map((entry, idx) => (
+          <ScoreCard
             key={entry.participant_id}
-            role="listitem"
-            aria-label={`${entry.name}: ${entry.percentage}% (${entry.correct} out of ${entry.total_questions} correct)`}
-            style={{
-              ...baseCardStyle,
-              ...getPodiumStyle(idx + 1),
-              animation: `scaleIn ${200 + idx * 100}ms ease-out`,
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: theme.spacing.md, flex: 1 }}>
-              <span
-                style={{
-                  fontSize: idx < 3 ? '2rem' : '1.25rem',
-                  fontWeight: theme.fontWeights.bold,
-                  minWidth: idx < 3 ? '3rem' : '2rem',
-                  textAlign: 'center',
-                }}
-                aria-hidden="true"
-              >
-                {getMedal(idx + 1)}
-              </span>
-              <div style={{ flex: 1 }}>
-                <div style={{
-                  fontWeight: theme.fontWeights.semibold,
-                  fontSize: idx === 0 ? theme.fontSizes.xl : theme.fontSizes.lg,
-                  marginBottom: '0.25rem',
-                }}>
-                  {entry.name}
-                </div>
-                <div style={{
-                  fontSize: theme.fontSizes.sm,
-                  color: theme.colors.neutral[600],
-                  fontWeight: theme.fontWeights.normal,
-                }}>
-                  {entry.correct} / {entry.total_questions} correct · {entry.answered} answered
-                </div>
-              </div>
-            </div>
-            <div style={{
-              fontSize: idx === 0 ? '2rem' : '1.5rem',
-              fontWeight: theme.fontWeights.bold,
-              color: idx === 0 ? '#f59e0b' : theme.colors.primary[600],
-              minWidth: '4rem',
-              textAlign: 'right',
-            }}>
-              {entry.percentage}%
-            </div>
-          </div>
+            entry={entry}
+            rank={idx + 1}
+          />
         ))}
       </div>
-    </div>
+
+      {rest.length > 0 && (
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+            gap: theme.spacing.md,
+          }}
+        >
+          {rest.map((entry, idx) => (
+            <ScoreCard
+              key={entry.participant_id}
+              entry={entry}
+              rank={idx + 4}
+            />
+          ))}
+        </div>
+      )}
+    </section>
   );
 }
 
-const baseCardStyle = {
-  padding: theme.spacing.lg,
-  borderRadius: theme.radii.xl,
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'space-between',
-  transition: `all ${theme.transitions.base}`,
-  border: `1px solid ${theme.colors.neutral[200]}`,
-  background: '#ffffff',
-};
+function ScoreCard({ entry, rank }) {
+  const accent = getAccent(rank);
+  const rankLabel = rank <= 3 ? `Podium #${rank}` : `Rank #${rank}`;
+  return (
+    <article
+      style={{
+        padding: theme.spacing.lg,
+        borderRadius: theme.radii.xl,
+        background: accent.background,
+        border: accent.border,
+        boxShadow: accent.shadow,
+        color: accent.text,
+        display: 'flex',
+        flexDirection: 'column',
+        gap: theme.spacing.md,
+        minWidth: 0,
+        boxSizing: 'border-box',
+      }}
+    >
+      <div style={{ display: 'flex', justifyContent: 'space-between', gap: theme.spacing.md, alignItems: 'flex-start', flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: theme.spacing.sm, minWidth: 0 }}>
+          <span style={{ fontSize: rank <= 3 ? '2.5rem' : '1.5rem' }}>{accent.icon}</span>
+          <div style={{ minWidth: 0 }}>
+            <div style={{
+              fontWeight: theme.fontWeights.bold,
+              fontSize: rank <= 3 ? theme.fontSizes['2xl'] : theme.fontSizes.lg,
+              lineHeight: 1.2,
+              wordBreak: 'break-word',
+            }}>
+              {entry.name}
+            </div>
+            <div style={{ fontSize: theme.fontSizes.sm, color: accent.subtleText }}>
+              {rankLabel}
+            </div>
+          </div>
+        </div>
+        <div style={{ textAlign: 'right' }}>
+          <div style={{ fontSize: rank <= 3 ? '2.5rem' : '1.75rem', fontWeight: theme.fontWeights.bold, color: accent.score }}>
+            {entry.percentage}%
+          </div>
+          <div style={{ fontSize: theme.fontSizes.xs, color: accent.subtleText }}>
+            accuracy
+          </div>
+        </div>
+      </div>
+      <div style={{ fontSize: theme.fontSizes.sm, color: accent.subtleText, display: 'flex', gap: theme.spacing.lg, flexWrap: 'wrap' }}>
+        <span>Correct: <strong>{entry.correct}</strong> / {entry.total_questions}</span>
+        <span>Answered: <strong>{entry.answered}</strong></span>
+      </div>
+      <div style={{ height: '6px', background: accent.progressBg, borderRadius: theme.radii.full }}>
+        <div
+          style={{
+            width: `${entry.percentage}%`,
+            height: '100%',
+            borderRadius: theme.radii.full,
+            background: accent.progress,
+            transition: `width ${theme.transitions.slow}`,
+          }}
+        />
+      </div>
+    </article>
+  );
+}
 
+function getAccent(rank) {
+  const palette = {
+    1: {
+      background: 'linear-gradient(135deg, #fef3c7, #fde68a)',
+      border: '1px solid #fbbf24',
+      shadow: theme.shadows.lg,
+      text: '#78350f',
+      subtleText: '#b45309',
+      score: '#b45309',
+      progress: '#f59e0b',
+      progressBg: 'rgba(245, 158, 11, 0.2)',
+      icon: '🥇',
+    },
+    2: {
+      background: 'linear-gradient(135deg, #e5e7eb, #f3f4f6)',
+      border: '1px solid #9ca3af',
+      shadow: theme.shadows.md,
+      text: '#1f2937',
+      subtleText: '#6b7280',
+      score: '#4b5563',
+      progress: '#9ca3af',
+      progressBg: 'rgba(156, 163, 175, 0.3)',
+      icon: '🥈',
+    },
+    3: {
+      background: 'linear-gradient(135deg, #ffe4e6, #fecdd3)',
+      border: '1px solid #fb7185',
+      shadow: theme.shadows.md,
+      text: '#9f1239',
+      subtleText: '#be123c',
+      score: '#be123c',
+      progress: '#f472b6',
+      progressBg: 'rgba(244, 114, 182, 0.2)',
+      icon: '🥉',
+    },
+  };
+
+  return palette[rank] || {
+    background: '#ffffffcc',
+    border: `1px solid ${theme.colors.neutral[200]}`,
+    shadow: theme.shadows.sm,
+    text: theme.colors.neutral[900],
+    subtleText: theme.colors.neutral[500],
+    score: theme.colors.primary[600],
+    progress: theme.colors.primary[500],
+    progressBg: 'rgba(37, 99, 235, 0.15)',
+    icon: `${rank}.`,
+  };
+}

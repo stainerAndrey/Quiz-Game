@@ -14,6 +14,7 @@ class Question(BaseModel):
     image_url: Optional[str] = None  # existing field
     time_limit_seconds: Optional[int] = None  # NEW: per-question time limit override
     translations: Optional[Dict[str, QuestionTranslation]] = None
+    reveal_image_url: Optional[str] = None
 
 class QuizState(BaseModel):
     current_question_index: int

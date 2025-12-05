@@ -1,65 +1,269 @@
 {
-  "final_image_url": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTgVUVUOf8KhqELeGFx6MNDaXN_4ANjPCu2Sw&s",
+  "final_image_url": "/images/finale.jpeg",
   "questions": [
     {
       "id": 1,
-      "text": "What is the capital of France?",
-      "options": ["Berlin", "Madrid", "Paris", "Rome"],
+      "text": "What does Inosuke wear on his head in Demon Slayer?",
+      "options": ["A wolf pelt", "A fox mask", "A boar's head", "A dragon helmet"],
       "correct_index": 2,
-      "image_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/1/15/Paris_from_the_Arc_de_Triomphe%2C_17_October_2019.jpg/640px-Paris_from_the_Arc_de_Triomphe%2C_17_October_2019.jpg",
+      "image_url": "/images/q1-question.jpeg",
+      "reveal_image_url": "/images/q1-reveal.jpeg",
       "translations": {
         "ru": {
-          "text": "Какова столица Франции?",
-          "options": ["Берлин", "Мадрид", "Париж", "Рим"]
+          "text": "Что носит на голове Иноскэ в «Клинке, рассекающем демонов»?",
+          "options": ["Волчью шкуру", "Лисью маску", "Голову вепря", "Шлем в виде дракона"]
         }
       }
     },
     {
       "id": 2,
-      "text": "Which language is most commonly used with React on the web?",
-      "options": ["Python", "JavaScript/TypeScript", "Go", "Rust"],
+      "text": "What do Chihiro's parents turn into after eating the food?",
+      "options": ["Cows", "Pigs", "Dragons", "Spirits"],
       "correct_index": 1,
-      "image_url": "https://upload.wikimedia.org/wikipedia/commons/a/a7/React-icon.svg",
+      "image_url": "/images/q2-question.jpeg",
+      "reveal_image_url": "/images/q2-reveal.jpeg",
       "translations": {
         "ru": {
-          "text": "Какой язык чаще всего используют с React в веб-разработке?",
-          "options": ["Python", "JavaScript/TypeScript", "Go", "Rust"]
+          "text": "В кого превращаются родители Тихиро после того, как поедают еду?",
+          "options": ["В коров", "В свиней", "В драконов", "В духов"]
         }
       }
     },
     {
       "id": 3,
-      "text": "What does CSS stand for?",
-      "options": [
-        "Counter Style Sheet",
-        "Cascading Style Sheets",
-        "Computer Style System",
-        "Cool Styling Stuff"
-      ],
-      "correct_index": 1,
-      "image_url": "https://upload.wikimedia.org/wikipedia/commons/thumb/a/ab/Official_CSS_Logo.svg/640px-Official_CSS_Logo.svg.png",
+      "text": "Which hero class is Saitama placed in after his exam?",
+      "options": ["S-Class", "B-Class", "C-Class", "A-Class"],
+      "correct_index": 2,
+      "image_url": "/images/q3-question.jpeg",
+      "reveal_image_url": "/images/q3-reveal.jpeg",
       "translations": {
         "ru": {
-          "text": "Как расшифровывается CSS?",
-          "options": [
-            "Counter Style Sheet",
-            "Cascading Style Sheets",
-            "Computer Style System",
-            "Cool Styling Stuff"
-          ]
+          "text": "В какой класс героев зачислили Сайтаму после экзамена?",
+          "options": ["В класс S", "В класс B", "В класс C", "В класс A"]
         }
       }
     },
     {
       "id": 4,
-      "text": "Is the kitty a goofball?",
-      "options": ["Yes", "Of course", "My goofball", "Such a goofball!"],
-      "correct_index": 2,
-      "image_url": "https://scontent.ftlv1-1.fna.fbcdn.net/v/t39.30808-6/516507674_3232362490273630_7262963780985063158_n.jpg?stp=cp6_dst-jpg_tt6&_nc_cat=111&ccb=1-7&_nc_sid=6ee11a&_nc_ohc=mDkPLHvc_cEQ7kNvwFOScFb&_nc_oc=AdmosbDp714RCWJuxqLUoHjCKLyc3iZ_Nt6fvrkb9f6AgCAkM7jqgm3QEB9CxydZaST9TKxuRubIFsNWfbQyKmnA&_nc_zt=23&_nc_ht=scontent.ftlv1-1.fna&_nc_gid=r-mFL7UjC_kHy0Dd2RhNVw&oh=00_Afiysh4hYMnnJK0mDMf1UV1yZLRKXdUbOS0cxfQ9acNnbA&oe=6923F531",
+      "text": "What is Ryuk's favorite fruit in Death Note?",
+      "options": ["Oranges", "Apples", "Bananas", "Grapes"],
+      "correct_index": 1,
+      "image_url": "/images/q4-question.jpeg",
+      "reveal_image_url": "/images/q4-reveal.jpeg",
       "translations": {
         "ru": {
-          "text": "Котик дурачок?",
-          "options": ["Да", "Конечно", "Мой дурачок", "О, дурачок!"]
+          "text": "Какой фрукт больше всего любит Рюк в «Тетради смерти»?",
+          "options": ["Апельсины", "Яблоки", "Бананы", "Виноград"]
+        }
+      }
+    },
+    {
+      "id": 5,
+      "text": "What is the name of Eren Yeager's father in Attack on Titan?",
+      "options": ["Kenny Ackerman", "Reiner Braun", "Grisha Yeager", "Zeke Yeager"],
+      "correct_index": 2,
+      "image_url": "/images/q5-question.jpeg",
+      "reveal_image_url": "/images/q5-reveal.jpeg",
+      "translations": {
+        "ru": {
+          "text": "Как зовут отца Эрена в «Атаке титанов»?",
+          "options": ["Кенни Аккерман", "Райнер Браун", "Гриша Йегер", "Зик Йегер"]
+        }
+      }
+    },
+    {
+      "id": 6,
+      "text": "What is the name of the Chainsaw Devil in Chainsaw Man?",
+      "options": ["Power", "Makima", "Pochita", "Aki"],
+      "correct_index": 2,
+      "image_url": "/images/q6-question.jpeg",
+      "reveal_image_url": "/images/q6-reveal.jpeg",
+      "translations": {
+        "ru": {
+          "text": "Как зовут демона бензопилы в «Человек-бензопила»?",
+          "options": ["Пауэр", "Макима", "Почита", "Аки"]
+        }
+      }
+    },
+    {
+      "id": 7,
+      "text": "What gift does Himmel give Frieren?",
+      "options": ["A sword", "A cloak", "A ring", "A necklace"],
+      "correct_index": 2,
+      "image_url": "/images/q7-question.jpeg",
+      "reveal_image_url": "/images/q7-reveal.jpeg",
+      "translations": {
+        "ru": {
+          "text": "Что Химмель подарил Фрирен?",
+          "options": ["Меч", "Плащ", "Кольцо", "Ожерелье"]
+        }
+      }
+    },
+    {
+      "id": 8,
+      "text": "In Fullmetal Alchemist, what did Edward sacrifice to bind Alphonse's soul to the armor?",
+      "options": ["His heart", "His right arm", "His left arm", "His leg"],
+      "correct_index": 1,
+      "image_url": "/images/q8-question.jpeg",
+      "reveal_image_url": "/images/q8-reveal.jpeg",
+      "translations": {
+        "ru": {
+          "text": "Чем пожертвовал Эдвард в «Стальном алхимике», чтобы запечатать душу Альфонса в доспех?",
+          "options": ["Своим сердцем", "Своей правой рукой", "Своей левой рукой", "Своей ногой"]
+        }
+      }
+    },
+    {
+      "id": 9,
+      "text": "In Made in Abyss, what was used as the core material for Riko's own white whistle?",
+      "options": ["A powerful relic", "Her mother's whistle", "Her own life", "Prushka's transformed form"],
+      "correct_index": 3,
+      "image_url": "/images/q9-question.jpeg",
+      "reveal_image_url": "/images/q9-reveal.jpeg",
+      "translations": {
+        "ru": {
+          "text": "В «Made in Abyss»: что послужило материалом для собственного белого свистка Рико?",
+          "options": ["Мощный реликт", "Свисток её матери", "Жизнь самой Рико", "Преобразованная форма Прушки"]
+        }
+      }
+    },
+    {
+      "id": 10,
+      "text": "In Dandadan, into which object did Momo seal Turbo Granny?",
+      "options": ["A traffic mirror", "A lucky cat statue", "A smartphone", "A pair of golden balls"],
+      "correct_index": 1,
+      "image_url": "/images/q10-question.jpeg",
+      "reveal_image_url": "/images/q10-reveal.jpeg",
+      "translations": {
+        "ru": {
+          "text": "В «Dandadan»: во что Момо запечатала Турбо-бабку?",
+          "options": ["В дорожное зеркало", "В статуэтку кота-манэки-неко", "В смартфон", "В пару золотых шариков"]
+        }
+      }
+    },
+    {
+      "id": 11,
+      "text": "In Delicious in Dungeon, what is actually controlling the Living Armor the party fights?",
+      "options": ["A cursed knight's soul", "A colony of slimes", "A small mollusk-like monster inside", "A remote wizard"],
+      "correct_index": 2,
+      "image_url": "/images/q11-question.jpeg",
+      "reveal_image_url": "/images/q11-reveal.jpeg",
+      "translations": {
+        "ru": {
+          "text": "В «Dungeon Meshi»: кто на самом деле управлял живой бронёй, с которой сражается отряд?",
+          "options": ["Проклятая душа рыцаря", "Колония слизней", "Маленький моллюск внутри доспехов", "Маг, управляющий на расстоянии"]
+        }
+      }
+    },
+    {
+      "id": 12,
+      "text": "In Howl's Moving Castle, what is the name of the fire demon bound to the castle's hearth?",
+      "options": ["Totoro", "No-Face", "Calcifer", "Turnip-Head"],
+      "correct_index": 2,
+      "image_url": "/images/q12-question.jpeg",
+      "reveal_image_url": "/images/q12-reveal.jpeg",
+      "translations": {
+        "ru": {
+          "text": "В «Ходячем замке Хаула»: как звали демона огня в очаге?",
+          "options": ["Тоторо", "Безликий", "Калцифер", "Пугало-Репка"]
+        }
+      }
+    },
+    {
+      "id": 13,
+      "text": "In The Apothecary Diaries, which rare ingredient did Maomao desire to obtain the most?",
+      "options": ["Jade powder", "Lotus extract", "Bezoar", "Crystalized desert honey"],
+      "correct_index": 2,
+      "image_url": "/images/q13-question.jpeg",
+      "reveal_image_url": "/images/q13-reveal.jpeg",
+      "translations": {
+        "ru": {
+          "text": "В «Записках аптекаря», какой редкий ингредиент Мао Мао больше всего хотела заполучить?",
+          "options": ["Порошок яшмы", "Экстракт лотоса", "Безоар", "Кристаллизованный мёд пустыни"]
+        }
+      }
+    },
+    {
+      "id": 14,
+      "text": "What is the name of the Nine-Tailed Fox sealed inside Naruto?",
+      "options": ["Shukaku", "Gyūki", "Kurama", "Matatabi"],
+      "correct_index": 2,
+      "image_url": "/images/q14-question.jpeg",
+      "reveal_image_url": "/images/q14-reveal.jpeg",
+      "translations": {
+        "ru": {
+          "text": "Как зовут Девятихвостого, запечатанного внутри Наруто?",
+          "options": ["Шукаку", "Гьюки", "Курама", "Мататаби"]
+        }
+      }
+    },
+    {
+      "id": 15,
+      "text": "In Fullmetal Alchemist, what animal companion travels with May Chang?",
+      "options": ["A white cat", "A small panda", "A monkey", "A hawk"],
+      "correct_index": 1,
+      "image_url": "/images/q15-question.jpeg",
+      "reveal_image_url": "/images/q15-reveal.jpeg",
+      "translations": {
+        "ru": {
+          "text": "В «Стальном алхимике»: с каким животным путешествует Мэй Чан?",
+          "options": ["С белым котом", "С маленькой пандой", "С обезьянкой", "С ястребом"]
+        }
+      }
+    },
+    {
+      "id": 16,
+      "text": "In Attack on Titan, how many distinct intelligent Titan powers exist in total?",
+      "options": ["Seven", "Nine", "Ten", "Twelve"],
+      "correct_index": 1,
+      "image_url": "/images/q16-question.jpeg",
+      "reveal_image_url": "/images/q16-reveal.jpeg",
+      "translations": {
+        "ru": {
+          "text": "В «Атаке титанов»: сколько всего существует разумных титанов?",
+          "options": ["Семь", "Девять", "Десять", "Двенадцать"]
+        }
+      }
+    },
+    {
+      "id": 17,
+      "text": "In Frieren, what traditional dish is cooked to celebrate a warrior's birthday?",
+      "options": ["Roast wyvern", "Warrior's curry", "Giant hamburger steak", "Dragon stew"],
+      "correct_index": 2,
+      "image_url": "/images/q17-question.jpeg",
+      "reveal_image_url": "/images/q17-reveal.jpeg",
+      "translations": {
+        "ru": {
+          "text": "В «Фрирен»: какое блюдо традиционно готовят на день рождения воина?",
+          "options": ["Жареного виверна", "Карри воина", "Гигантский бифштекс (hamburger steak)", "Рагу из дракона"]
+        }
+      }
+    },
+    {
+      "id": 18,
+      "text": "In Demon Slayer, what did Tanjiro have to slice in half to qualify for Final Selection?",
+      "options": ["A steel dummy", "A massive boulder", "A giant tree", "A waterfall"],
+      "correct_index": 1,
+      "image_url": "/images/q18-question.jpeg",
+      "reveal_image_url": "/images/q18-reveal.jpeg",
+      "translations": {
+        "ru": {
+          "text": "В «Клинке, рассекающем демонов»: что должен был разрубить Танжиро, чтобы попасть на Финальный отбор?",
+          "options": ["Стального манекена", "Огромный валун", "Гигантское дерево", "Водопад"]
+        }
+      }
+    },
+    {
+      "id": 19,
+      "text": "In Delicious in Dungeon, when the party is transformed by the changeling circle, into which race is Senshi turned?",
+      "options": ["A tallman (human)", "A half-foot", "An elf", "A kobold"],
+      "correct_index": 2,
+      "image_url": "/images/q19-question.jpeg",
+      "reveal_image_url": "/images/q19-reveal.jpeg",
+      "translations": {
+        "ru": {
+          "text": "В «Подземелье вкусностей»: в кого превращается Сенши пройдя через круг грибов-перевертышей?",
+          "options": ["В человека", "В полурослика", "В эльфа", "В кобольда"]
         }
       }
     }

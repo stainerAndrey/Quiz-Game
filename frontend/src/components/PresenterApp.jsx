@@ -19,9 +19,11 @@ export default function PresenterApp() {
   const [adminToken, setAdminToken] = useState(() => localStorage.getItem("admin_token") || "");
   const [showTokenPrompt, setShowTokenPrompt] = useState(false);
   const [toast, setToast] = useState(null);
+  const [localTimer, setLocalTimer] = useState(null);
   const warnPlayedRef = useRef(false);
   const revealSound = useRef(null);
   const isMobile = useMediaQuery('(max-width: 1024px)');
+  const revealMode = Boolean(state?.state?.reveal_answer);
 
   useEffect(() => {
     revealSound.current = new Audio("data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAESsAACJWAAACABAAZGF0YQAAAAA=");
@@ -40,6 +42,16 @@ export default function PresenterApp() {
       try { const apiUrl = new URL(API_BASE); return `http://${apiUrl.hostname}:5173/`; } catch {}
     }
     return window.location.origin + "/";
+  }, []);
+
+  const wifiConfig = useMemo(() => {
+    const ssid = import.meta.env.VITE_WIFI_SSID;
+    const password = import.meta.env.VITE_WIFI_PASSWORD;
+    if (!ssid || !password) return null;
+    const security = import.meta.env.VITE_WIFI_SECURITY || "WPA";
+    const escapeField = (value) => String(value).replace(/([\\\\;,:"])/g, "\\$1");
+    const qrValue = `WIFI:T:${escapeField(security)};S:${escapeField(ssid)};P:${escapeField(password)};;`;
+    return { ssid, password, security, qrValue };
   }, []);
 
   useEffect(() => {
@@ -64,6 +76,30 @@ export default function PresenterApp() {
     const id = setInterval(fetchParticipants, 2000);
     return () => clearInterval(id);
   }, [state]);
+
+  useEffect(() => {
+    if (!state?.question || revealMode) {
+      setLocalTimer(null);
+      return;
+    }
+    if (typeof state?.remaining_seconds === "number") {
+      setLocalTimer(state.remaining_seconds);
+    } else {
+      setLocalTimer(null);
+    }
+  }, [state?.question?.id, state?.remaining_seconds, state?.state?.current_question_index, revealMode]);
+
+  useEffect(() => {
+    if (revealMode) return;
+    const id = setInterval(() => {
+      setLocalTimer(prev => {
+        if (prev === null) return null;
+        if (prev <= 0) return 0;
+        return prev - 1;
+      });
+    }, 1000);
+    return () => clearInterval(id);
+  }, [revealMode]);
 
   const authHeaders = () => adminToken ? { 'X-Admin-Token': adminToken } : {};
 
@@ -148,7 +184,9 @@ export default function PresenterApp() {
   const currentIndex = state?.state?.current_question_index ?? -1;
   const quizStarted = currentIndex >= 0;
   const totalQuestions = state?.total_questions ?? 0;
-  const remainingSeconds = state?.remaining_seconds ?? null;
+  const remainingSeconds = revealMode ? null : localTimer;
+  const displayImage = (revealMode && q?.reveal_image_url) ? q.reveal_image_url : q?.image_url;
+  const questionImageAlt = revealMode ? "Revealed illustration" : "Question illustration";
 
   useEffect(() => { warnPlayedRef.current = false; }, [state?.state?.current_question_index]);
   useEffect(() => {
@@ -174,6 +212,89 @@ export default function PresenterApp() {
     if (remainingSeconds <= 15) return 'warning';
     return 'info';
   };
+
+  const statusBadge = (() => {
+    if (isFinished) return null;
+    if (revealMode) {
+      return (
+        <Badge variant="success" size="lg">
+          ✨ Answer revealed
+        </Badge>
+      );
+    }
+    if (remainingSeconds !== null) {
+      return (
+        <Badge variant={getTimerVariant()} size="lg">
+          ⏱️ Time Left: {remainingSeconds}s
+        </Badge>
+      );
+    }
+    if (!quizStarted) {
+      return (
+        <Badge variant="default" size="lg">
+          ⏱️ Waiting to start
+        </Badge>
+      );
+    }
+    return null;
+  })();
+
+  const questionControls = (() => {
+    if (isFinished) return null;
+    if (!quizStarted) {
+      return (
+        <Button
+          onClick={() => callAdmin('start')}
+          size="sm"
+          leftIcon="▶"
+          aria-label="Start the quiz"
+        >
+          Start Quiz
+        </Button>
+      );
+    }
+    return (
+      <>
+        <Button
+          onClick={() => callAdmin('prev')}
+          disabled={currentIndex <= 0}
+          variant="secondary"
+          size="sm"
+          leftIcon="◀"
+          aria-label="Previous question"
+        >
+          Prev
+        </Button>
+        <Button
+          onClick={() => callAdmin('next')}
+          size="sm"
+          rightIcon="▶"
+          aria-label="Next question"
+        >
+          Next
+        </Button>
+        <Button
+          onClick={() => callAdmin('reveal')}
+          disabled={!q || state.state.reveal_answer}
+          variant="secondary"
+          size="sm"
+          aria-label="Reveal correct answer"
+        >
+          Reveal
+        </Button>
+        {remainingSeconds !== null && (
+          <Button
+            onClick={extendTimer}
+            variant="ghost"
+            size="sm"
+            aria-label="Add 10 seconds"
+          >
+            +10s
+          </Button>
+        )}
+      </>
+    );
+  })();
 
   return (
     <div>
@@ -201,38 +322,66 @@ export default function PresenterApp() {
       )}
 
       {/* Header */}
-      <header style={{
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        marginBottom: theme.spacing.lg,
-        flexWrap: 'wrap',
-        gap: theme.spacing.md,
-      }}>
-        <h1 style={{ margin: 0, flex: '1 1 auto' }}>
-          Quiz Presenter
-        </h1>
-        <div style={{ display: 'flex', alignItems: 'center', gap: theme.spacing.sm, flexWrap: 'wrap' }}>
-          <Badge variant={wsStatus === 'connected' ? 'success' : 'danger'}>
-            {wsStatus === 'connected' ? '🟢 Live' : '🔴 Connecting...'}
-          </Badge>
-          <Button
-            onClick={resetQuiz}
-            size="sm"
-            variant="danger"
-            aria-label="Reset quiz game"
-            title="Reset entire quiz (clears all participants and answers)"
+      <header
+        style={{
+          position: 'sticky',
+          top: 0,
+          left: 0,
+          right: 0,
+          zIndex: 400,
+          background: '#ffffff',
+          padding: `${theme.spacing.sm} 0`,
+          marginBottom: theme.spacing.lg,
+          borderBottom: `1px solid ${theme.colors.neutral[200]}`,
+                 boxShadow: '0 6px 16px -8px rgba(15, 23, 42, 0.25)',
+ }}
+      >
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            flexWrap: 'wrap',
+            gap: theme.spacing.sm,
+            justifyContent: 'space-between',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: theme.spacing.sm, flex: '1 1 auto', minWidth: 0 }}>
+            <h1 style={{ margin: 0, whiteSpace: 'nowrap' }}>
+              Quiz Presenter
+            </h1>
+            {statusBadge}
+          </div>
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: theme.spacing.sm,
+              flexWrap: 'wrap',
+              justifyContent: 'flex-end',
+            }}
           >
-            🔄 Reset
-          </Button>
-          <Button
-            onClick={() => setShowTokenPrompt(s=>!s)}
-            size="sm"
-            variant="ghost"
-            aria-label="Admin authentication"
-          >
-            🔐 Auth
-          </Button>
+            {questionControls}
+            <Badge variant={wsStatus === 'connected' ? 'success' : 'danger'}>
+              {wsStatus === 'connected' ? '🟢 Live' : '🔴 Connecting...'}
+            </Badge>
+            <Button
+              onClick={resetQuiz}
+              size="sm"
+              variant="danger"
+              aria-label="Reset quiz game"
+              title="Reset entire quiz (clears all participants and answers)"
+            >
+              🔄 Reset
+            </Button>
+            <Button
+              onClick={() => setShowTokenPrompt(s=>!s)}
+              size="sm"
+              variant="ghost"
+              aria-label="Admin authentication"
+            >
+              🔐 Auth
+            </Button>
+          </div>
         </div>
       </header>
 
@@ -278,15 +427,6 @@ export default function PresenterApp() {
         </div>
       )}
 
-      {/* Timer Display */}
-      {remainingSeconds !== null && !isFinished && (
-        <div style={{ marginBottom: theme.spacing.lg }}>
-          <Badge variant={getTimerVariant()} size="lg">
-            ⏱️ Time Left: {remainingSeconds}s
-          </Badge>
-        </div>
-      )}
-
       {/* Main Layout */}
       <div style={{
         display: 'flex',
@@ -295,7 +435,17 @@ export default function PresenterApp() {
         alignItems: 'flex-start',
       }}>
         {/* Main Content Area */}
-        <main style={{ flex: isMobile ? '1' : '3 1 600px' }}>
+        <main
+          style={{
+            flex: isMobile ? '1' : '3 1 600px',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: theme.spacing.lg,
+            paddingRight: isMobile ? 0 : theme.spacing.sm,
+            boxSizing: 'border-box',
+            minWidth: 0,
+          }}
+        >
           {/* Waiting to Start */}
           {!quizStarted && !isFinished && (
             <Card variant="gradient" padding="xl">
@@ -321,67 +471,73 @@ export default function PresenterApp() {
                   marginBottom: theme.spacing.sm,
                   color: theme.colors.neutral[600],
                 }}>
-                  Share this QR code with participants:
+                  Share these QR codes with participants:
                 </div>
                 <div style={{
-                  background: '#fff',
-                  padding: theme.spacing.lg,
-                  display: 'inline-block',
-                  borderRadius: theme.radii.lg,
-                  border: `1px solid ${theme.colors.neutral[200]}`,
-                  boxShadow: theme.shadows.md,
+                  display: 'flex',
+                  flexWrap: 'wrap',
+                  gap: theme.spacing.lg,
+                  alignItems: 'stretch',
                 }}>
-                  <QRCode value={participantUrl} size={128} />
-                </div>
-                <div style={{
-                  marginTop: theme.spacing.sm,
-                  fontSize: theme.fontSizes.xs,
-                  color: theme.colors.neutral[500],
-                }}>
-                  {participantUrl}
+                  <div style={{
+                    background: '#fff',
+                    padding: theme.spacing.lg,
+                    borderRadius: theme.radii.lg,
+                    border: `1px solid ${theme.colors.neutral[200]}`,
+                    boxShadow: theme.shadows.md,
+                    minWidth: '220px',
+                    flex: '0 1 260px',
+                  }}>
+                    <div style={{ fontWeight: theme.fontWeights.semibold, marginBottom: theme.spacing.sm }}>
+                      Player join link
+                    </div>
+                    <QRCode value={participantUrl} size={128} />
+                    <div style={{
+                      marginTop: theme.spacing.sm,
+                      fontSize: theme.fontSizes.xs,
+                      color: theme.colors.neutral[500],
+                      wordBreak: 'break-all',
+                    }}>
+                      {participantUrl}
+                    </div>
+                  </div>
+
+                  {wifiConfig && (
+                    <div style={{
+                      background: '#fff',
+                      padding: theme.spacing.lg,
+                      borderRadius: theme.radii.lg,
+                      border: `1px solid ${theme.colors.neutral[200]}`,
+                      boxShadow: theme.shadows.md,
+                      minWidth: '220px',
+                      flex: '0 1 260px',
+                    }}>
+                      <div style={{ fontWeight: theme.fontWeights.semibold, marginBottom: theme.spacing.sm }}>
+                        Wi-Fi access
+                      </div>
+                      <QRCode value={wifiConfig.qrValue} size={128} />
+                      <div style={{
+                        marginTop: theme.spacing.sm,
+                        fontSize: theme.fontSizes.xs,
+                        color: theme.colors.neutral[600],
+                        lineHeight: 1.5,
+                      }}>
+                        Network: <strong>{wifiConfig.ssid}</strong><br />
+                        Security: {wifiConfig.security}<br />
+                        Password: {wifiConfig.password}
+                      </div>
+                      <div style={{
+                        marginTop: theme.spacing.xs,
+                        fontSize: theme.fontSizes.xs,
+                        color: theme.colors.neutral[500],
+                      }}>
+                        Scan to auto-join Wi-Fi
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
             </Card>
-          )}
-
-          {/* Quiz Navigation */}
-          {quizStarted && !isFinished && (
-            <div style={{ marginBottom: theme.spacing.lg, display: 'flex', gap: theme.spacing.sm, flexWrap: 'wrap' }}>
-              <Button
-                onClick={() => callAdmin('prev')}
-                disabled={currentIndex <= 0}
-                variant="secondary"
-                leftIcon="◀"
-                aria-label="Previous question"
-              >
-                Prev
-              </Button>
-              <Button
-                onClick={() => callAdmin('next')}
-                rightIcon="▶"
-                aria-label="Next question"
-              >
-                Next
-              </Button>
-              <Button
-                onClick={() => callAdmin('reveal')}
-                disabled={!q || state.state.reveal_answer}
-                variant="secondary"
-                aria-label="Reveal correct answer"
-              >
-                Reveal Answer
-              </Button>
-              {remainingSeconds !== null && (
-                <Button
-                  onClick={extendTimer}
-                  variant="ghost"
-                  size="sm"
-                  aria-label="Add 10 seconds"
-                >
-                  +10s ⏱️
-                </Button>
-              )}
-            </div>
           )}
 
           {/* Quiz Finished */}
@@ -414,11 +570,11 @@ export default function PresenterApp() {
           {quizStarted && q && !isFinished && (
             <Card variant="elevated" padding="xl">
               {/* Question Image */}
-              {q.image_url && (
+              {displayImage && (
                 <div style={{ textAlign: 'center', marginBottom: theme.spacing.lg }}>
                   <img
-                    src={q.image_url}
-                    alt='Question illustration'
+                    src={displayImage}
+                    alt={questionImageAlt}
                     style={{
                       maxWidth: '100%',
                       maxHeight: '300px',
@@ -456,7 +612,7 @@ export default function PresenterApp() {
                 margin: 0,
               }}>
                 {q.options.map((opt, idx) => {
-                  const isCorrect = q.correct_index === idx && state.state.reveal_answer;
+                  const isCorrect = revealMode && q.correct_index === idx;
                   return (
                     <li
                       key={idx}
@@ -480,6 +636,21 @@ export default function PresenterApp() {
                 })}
               </ol>
 
+              {revealMode && q.correct_index !== null && (
+                <div style={{
+                  marginTop: theme.spacing.lg,
+                  padding: theme.spacing.md,
+                  borderRadius: theme.radii.lg,
+                  background: theme.colors.success[50],
+                  border: `1px solid ${theme.colors.success[200]}`,
+                  color: theme.colors.success[700],
+                  fontWeight: theme.fontWeights.semibold,
+                }}>
+                  Correct answer:&nbsp;
+                  <strong>{q.options[q.correct_index]}</strong>
+                </div>
+              )}
+
               {/* Answer Distribution Chart */}
               {currentAgg && (
                 <AnswerChart
@@ -498,8 +669,9 @@ export default function PresenterApp() {
           style={{
             flex: isMobile ? '1' : '1 1 320px',
             minWidth: isMobile ? '100%' : '320px',
-            maxHeight: isMobile ? 'none' : '80vh',
-            overflowY: 'auto',
+            paddingRight: isMobile ? 0 : theme.spacing.sm,
+            position: isMobile ? 'static' : 'sticky',
+            top: isMobile ? 0 : '6rem',
           }}
         >
           <Card variant="default" padding="lg">
@@ -585,4 +757,3 @@ const tdStyle = {
   padding: theme.spacing.sm,
   fontSize: theme.fontSizes.sm,
 };
-

@@ -1,4 +1,6 @@
 # Test comment: File editing is working correctly
+import asyncio
+import contextlib
 import os
 from datetime import datetime, timezone
 from typing import List, Dict, Optional
@@ -38,7 +40,8 @@ app.add_middleware(
 manager = ConnectionManager()
 
 ADMIN_TOKEN = os.getenv("ADMIN_TOKEN", "changeme")
-DEFAULT_TIME_LIMIT = int(os.getenv("DEFAULT_TIME_LIMIT", "0"))  # 0 disables global default
+DEFAULT_TIME_LIMIT = int(os.getenv("DEFAULT_TIME_LIMIT", "30"))  # 0 disables global default
+timer_task: asyncio.Task | None = None
 
 # ---------------- Admin Auth ----------------
 
@@ -72,6 +75,36 @@ def compute_remaining_seconds() -> Optional[int]:
     rem = st.question_time_limit - elapsed
     return max(0, rem) if rem >= 0 else 0
 
+async def reveal_current_question(auto_reason: Optional[str] = None) -> bool:
+    """Mark the current question as revealed, stop the timer, and notify clients."""
+    st = quiz_state.state
+    if st.reveal_answer or st.current_question_index < 0 or st.is_finished:
+        return False
+    st.reveal_answer = True
+    st.question_time_limit = None
+    st.question_started_at = None
+    save_state()
+    await broadcast_state()
+    return True
+
+async def monitor_timer():
+    """Background task that checks the timer and triggers auto-reveal."""
+    try:
+        while True:
+            await asyncio.sleep(1)
+            st = quiz_state.state
+            if (
+                st.is_finished
+                or st.current_question_index < 0
+                or st.reveal_answer
+            ):
+                continue
+            remaining = compute_remaining_seconds()
+            if remaining is not None and remaining <= 0:
+                await reveal_current_question(auto_reason="timer_expired")
+    except asyncio.CancelledError:
+        return
+
 # ---------------- State projection ----------------
 
 def make_public_state() -> PublicState:
@@ -99,6 +132,7 @@ def make_public_state() -> PublicState:
             image_url=q.image_url,
             time_limit_seconds=q.time_limit_seconds,
             translations=q.translations,
+            reveal_image_url=None,
         )
     return PublicState(
         state=quiz_state.state,
@@ -157,6 +191,7 @@ def all_participants_answered_current() -> bool:
             return False
     return True
 
+
 # ---------------- Lifecycle ----------------
 
 @app.on_event("startup")
@@ -168,6 +203,18 @@ async def startup_event():
         quiz_state.state.current_question_index = -1
         quiz_state.state.question_started_at = None
         quiz_state.state.question_time_limit = None
+    global timer_task
+    if timer_task is None or timer_task.done():
+        timer_task = asyncio.create_task(monitor_timer())
+
+@app.on_event("shutdown")
+async def shutdown_event():
+    global timer_task
+    if timer_task:
+        timer_task.cancel()
+        with contextlib.suppress(asyncio.CancelledError):
+            await timer_task
+        timer_task = None
 
 # ---------------- Public endpoints ----------------
 
@@ -176,7 +223,6 @@ async def join(req: JoinRequest):
     name = req.name.strip()
     if not name:
         raise HTTPException(status_code=422, detail="Username cannot be empty")
-
     # Check if username already exists (case-sensitive)
     if name in quiz_state.participants:
         raise HTTPException(status_code=409, detail="This username is already in use. Please choose a different one.")
@@ -207,6 +253,8 @@ async def submit_answer(req: AnswerRequest):
     question = quiz_state.get_current_question()
     if not question or question.id != req.question_id:
         return {"status": "error", "message": "Question mismatch"}
+    if quiz_state.state.reveal_answer:
+        return {"status": "error", "message": "Answer already revealed"}
     remaining = compute_remaining_seconds()
     if remaining is not None and remaining <= 0:
         return {"status": "error", "message": "Time expired"}
@@ -217,6 +265,8 @@ async def submit_answer(req: AnswerRequest):
         return {"status": "error", "message": "Answer already locked"}
     quiz_state.answers[key] = req.option_index
     save_state()
+    if all_participants_answered_current():
+        await reveal_current_question(auto_reason="all_answered")
     return {"status": "ok"}
 
 @app.get("/answer_status/{username}/{question_id}")
@@ -256,7 +306,7 @@ async def admin_start():
 async def admin_next():
     if quiz_state.participants and not all_participants_answered_current():
         rem = compute_remaining_seconds()
-        if rem is None or rem > 0:
+        if not quiz_state.state.reveal_answer and (rem is None or rem > 0):
             return {"status": "error", "message": "Not all participants answered yet"}
     if quiz_state.state.current_question_index < len(quiz_state.QUIZ) - 1:
         quiz_state.state.current_question_index += 1
@@ -288,9 +338,7 @@ async def admin_prev():
 
 @app.post("/admin/reveal", dependencies=[Depends(verify_admin)])
 async def admin_reveal():
-    quiz_state.state.reveal_answer = True
-    save_state()
-    await broadcast_state()
+    await reveal_current_question(auto_reason="admin")
     return {"status": "ok", "state": quiz_state.state}
 
 @app.post("/admin/extend", dependencies=[Depends(verify_admin)])

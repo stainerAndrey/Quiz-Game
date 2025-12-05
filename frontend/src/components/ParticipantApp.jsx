@@ -7,9 +7,12 @@ import Card from "./ui/Card.jsx";
 import { useI18n, localizeQuestion } from "../i18n.jsx";
 import LanguageSelector from "./ui/LanguageSelector.jsx";
 
+const USERNAME_STORAGE_KEY = "quiz_username";
+
 export default function ParticipantApp() {
   const { language, t } = useI18n();
   const [username, setUsername] = useState("");
+  const [restoringSession, setRestoringSession] = useState(true);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [joining, setJoining] = useState(false);
   const [joinError, setJoinError] = useState("");
@@ -17,6 +20,8 @@ export default function ParticipantApp() {
   const [selectedOption, setSelectedOption] = useState(null);
   const [wsStatus, setWsStatus] = useState("disconnected");
   const [imageError, setImageError] = useState(false);
+  const [localTimer, setLocalTimer] = useState(null);
+  const revealMode = Boolean(state?.state?.reveal_answer);
   const localizedQuestion = useMemo(
     () => localizeQuestion(state?.question, language),
     [state?.question, language]
@@ -26,6 +31,44 @@ export default function ParticipantApp() {
       <LanguageSelector />
     </div>
   );
+
+  useEffect(() => {
+    let cancelled = false;
+    if (typeof window === "undefined") {
+      setRestoringSession(false);
+      return;
+    }
+    const storedName = window.localStorage.getItem(USERNAME_STORAGE_KEY);
+    if (storedName) {
+      setUsername(storedName);
+    }
+    if (!storedName) {
+      setRestoringSession(false);
+      return;
+    }
+    const attemptResume = async () => {
+      try {
+        const res = await fetch(`${API_BASE}/participant/${encodeURIComponent(storedName)}`);
+        if (!res.ok) {
+          if (res.status === 404 && typeof window !== "undefined") {
+            window.localStorage.removeItem(USERNAME_STORAGE_KEY);
+            if (!cancelled) setUsername("");
+          }
+          return;
+        }
+        if (cancelled) return;
+        setIsLoggedIn(true);
+      } catch {
+        // ignore network failures; show login form
+      } finally {
+        if (!cancelled) setRestoringSession(false);
+      }
+    };
+    attemptResume();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     if (!isLoggedIn || !username) return;
@@ -43,30 +86,72 @@ export default function ParticipantApp() {
   }, [isLoggedIn, username]);
 
   useEffect(() => {
+    let cancelled = false;
+    const controller = new AbortController();
     const checkExistingAnswer = async () => {
-      if (!state?.question || !username || !isLoggedIn) { setSelectedOption(null); return; }
+      if (!state?.question || !username || !isLoggedIn) {
+        setSelectedOption(null);
+        return;
+      }
+      setSelectedOption(null);
       try {
-        const res = await fetch(`${API_BASE}/answer_status/${encodeURIComponent(username)}/${state.question.id}`);
-        if (res.ok) {
-          const data = await res.json();
-          setSelectedOption(data.answered ? data.option_index : null);
+        const res = await fetch(
+          `${API_BASE}/answer_status/${encodeURIComponent(username)}/${state.question.id}`,
+          { signal: controller.signal }
+        );
+        if (!res.ok || cancelled) return;
+        const data = await res.json();
+        if (cancelled) return;
+        if (data.answered) {
+          setSelectedOption(data.option_index);
         }
-      } catch { setSelectedOption(null); }
+      } catch (error) {
+        if (error && error.name === "AbortError") return;
+      }
     };
     checkExistingAnswer();
+    return () => {
+      cancelled = true;
+      controller.abort();
+    };
   }, [state?.question?.id, username, isLoggedIn]);
+
+  useEffect(() => {
+    if (!state?.question || revealMode) {
+      setLocalTimer(null);
+      return;
+    }
+    if (typeof state?.remaining_seconds === "number") {
+      setLocalTimer(state.remaining_seconds);
+    } else {
+      setLocalTimer(null);
+    }
+  }, [state?.question?.id, state?.remaining_seconds, state?.state?.current_question_index, revealMode]);
+
+  useEffect(() => {
+    if (revealMode) return;
+    const id = setInterval(() => {
+      setLocalTimer(prev => {
+        if (prev === null) return null;
+        if (prev <= 0) return 0;
+        return prev - 1;
+      });
+    }, 1000);
+    return () => clearInterval(id);
+  }, [revealMode]);
 
   const join = async (e) => {
     e.preventDefault();
     if (!username.trim()) return;
     setJoining(true);
     setJoinError("");
+    const trimmedName = username.trim();
 
     try {
       const res = await fetch(`${API_BASE}/join`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: username.trim() })
+        body: JSON.stringify({ name: trimmedName })
       });
 
       if (!res.ok) {
@@ -80,7 +165,12 @@ export default function ParticipantApp() {
         return;
       }
 
-      await res.json();
+      const data = await res.json().catch(() => ({}));
+      const canonical = data.username || trimmedName;
+      setUsername(canonical);
+      if (typeof window !== "undefined") {
+        window.localStorage.setItem(USERNAME_STORAGE_KEY, canonical);
+      }
       setJoining(false);
       setIsLoggedIn(true);
     } catch {
@@ -89,27 +179,41 @@ export default function ParticipantApp() {
     }
   };
 
-  const remainingSeconds = state?.remaining_seconds ?? null;
+  const remainingSeconds = revealMode ? null : localTimer;
 
   const submitAnswer = async (idx) => {
-    if (!state?.question || !username || !isLoggedIn) return;
-    if (selectedOption !== null) return;
-    if (remainingSeconds !== null && remainingSeconds <= 0) return;
-    setSelectedOption(idx);
-    const res = await fetch(`${API_BASE}/answer`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ participant_id: username, question_id: state.question.id, option_index: idx }) });
-    const data = await res.json();
-    if (data.status === 'error') {
-      setSelectedOption(null);
-    }
+  if (!state?.question || !username || !isLoggedIn) return;
+  if (selectedOption !== null) return;
+  if (revealMode) return;
+  if (remainingSeconds !== null && remainingSeconds <= 0) return;
+  setSelectedOption(idx);
+  const res = await fetch(`${API_BASE}/answer`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ participant_id: username, question_id: state.question.id, option_index: idx }) });
+  const data = await res.json();
+  if (data.status === 'error') {
+    setSelectedOption(null);
+  }
   };
 
-  if (!isLoggedIn) {
+  if (restoringSession && !isLoggedIn) {
     return (
       <div style={{ maxWidth: '480px', margin: '2rem auto', padding: theme.spacing.xl }}>
         {languageSelector}
+        <Card variant="gradient" padding="xl" style={{ textAlign: 'center' }}>
+          <div style={{ fontSize: '3rem', marginBottom: theme.spacing.lg }}>🔄</div>
+          <h2 style={{ marginTop: 0 }}>{t("waiting_start_title")}</h2>
+          <p style={{ color: theme.colors.neutral[600] }}>Rejoining your previous session...</p>
+        </Card>
+      </div>
+    );
+  }
+
+  if (!isLoggedIn) {
+    return (
+      <div style={{ maxWidth: '480px', margin: '2rem auto', padding: theme.spacing.md }}>
+        {languageSelector}
         <Card variant="gradient" padding="xl">
-          <h1 style={{ marginTop: 0, textAlign: 'center' }}>{t("join_title")}</h1>
-          <p style={{ textAlign: 'center', color: theme.colors.neutral[600], marginBottom: theme.spacing.xl }}>
+          <h1 style={{ marginTop: 0, wordBreak: "break-word", fontSize: "clamp(1.5rem, 4vw, 3rem)", textAlign: 'center' }}>{t("join_title")}</h1>
+          <p style={{ textAlign: 'center', wordBreak: "break-word", fontSize: "clamp(1rem, 4vw, 1.5rem)", color: theme.colors.neutral[600], marginBottom: theme.spacing.xl }}>
             {t("join_subtitle")}
           </p>
 
@@ -145,10 +249,11 @@ export default function ParticipantApp() {
               style={{
                 padding: theme.spacing.md,
                 fontSize: theme.fontSizes.lg,
-                width: '100%',
+                width: '90%',
                 borderRadius: theme.radii.lg,
                 border: `2px solid ${joinError ? theme.colors.danger[500] : theme.colors.neutral[300]}`,
-                marginBottom: theme.spacing.lg,
+                margin: `${theme.spacing.lg} auto`,
+                display: "block",
                 fontFamily: 'inherit',
                 transition: `border-color ${theme.transitions.base}`,
               }}
@@ -160,7 +265,7 @@ export default function ParticipantApp() {
               disabled={joining || !username.trim()}
               loading={joining}
               size="lg"
-              style={{ width: '100%' }}
+              style={{ width: '100%', height: '48px' }}
             >
               {joining ? t("joining_button") : t("join_button")}
             </Button>
@@ -221,6 +326,8 @@ export default function ParticipantApp() {
   }
 
   const q = localizedQuestion;
+  const displayImage = (revealMode && q?.reveal_image_url) ? q.reveal_image_url : q?.image_url;
+  const imageAlt = revealMode ? t("reveal_image_alt") : t("question_image_alt");
   const currentIndex = state.state.current_question_index;
   const totalQuestions = state.total_questions;
 
@@ -271,22 +378,26 @@ export default function ParticipantApp() {
           <Badge variant="default">
             {t("question_progress", { current: currentIndex + 1, total: totalQuestions })}
           </Badge>
-          {remainingSeconds !== null && (
+          {revealMode ? (
+            <Badge variant="success">
+              ✨ {t("answer_revealed_badge")}
+            </Badge>
+          ) : remainingSeconds !== null ? (
             <Badge variant={getTimerVariant()}>
               {remainingSeconds > 0
                 ? t("timer_running", { seconds: remainingSeconds })
                 : t("timer_up")}
             </Badge>
-          )}
+          ) : null}
         </div>
       </div>
 
       <Card variant="elevated" padding="lg">
-        {q.image_url && !imageError && (
+        {displayImage && !imageError && (
           <div style={{ textAlign: 'center', marginBottom: theme.spacing.lg }}>
             <img
-              src={q.image_url}
-              alt={t("question_image_alt")}
+              src={displayImage}
+              alt={imageAlt}
               style={{
                 maxWidth: '100%',
                 maxHeight: 240,
@@ -298,7 +409,7 @@ export default function ParticipantApp() {
             />
           </div>
         )}
-        {q.image_url && imageError && (
+        {displayImage && imageError && (
           <div style={{
             color: theme.colors.neutral[400],
             fontStyle: 'italic',
@@ -318,6 +429,10 @@ export default function ParticipantApp() {
             marginTop: 0,
             marginBottom: theme.spacing.lg,
             color: theme.colors.neutral[900],
+            fontSize: "clamp(1.25rem, 5vw, 1.75rem)",
+            lineHeight: 1.35,
+            wordBreak: "break-word",
+            hyphens: "auto",
           }}
         >
           {q.text}
@@ -330,7 +445,8 @@ export default function ParticipantApp() {
         >
           {q.options.map((opt, idx) => {
             const isSelected = selectedOption === idx;
-            const isDisabled = selectedOption !== null || (remainingSeconds !== null && remainingSeconds <= 0);
+            const isCorrect = revealMode && q.correct_index === idx;
+            const isDisabled = revealMode || selectedOption !== null || (remainingSeconds !== null && remainingSeconds <= 0);
 
             return (
               <li key={idx} style={{ margin: `${theme.spacing.md} 0` }}>
@@ -344,26 +460,38 @@ export default function ParticipantApp() {
                     padding: theme.spacing.lg,
                     fontSize: theme.fontSizes.lg,
                     borderRadius: theme.radii.lg,
-                    border: isSelected ? `3px solid ${theme.colors.primary[600]}` : `2px solid ${theme.colors.neutral[300]}`,
-                    background: isSelected
-                      ? `linear-gradient(135deg, ${theme.colors.primary[100]}, ${theme.colors.primary[200]})`
-                      : `linear-gradient(135deg, #ffffff, ${theme.colors.neutral[50]})`,
+                    border: isCorrect
+                      ? `3px solid ${theme.colors.success[500]}`
+                      : isSelected
+                        ? `3px solid ${theme.colors.primary[600]}`
+                        : `2px solid ${theme.colors.neutral[300]}`,
+                    background: isCorrect
+                      ? `linear-gradient(135deg, ${theme.colors.success[50]}, ${theme.colors.success[100]})`
+                      : isSelected
+                        ? `linear-gradient(135deg, ${theme.colors.primary[100]}, ${theme.colors.primary[200]})`
+                        : `linear-gradient(135deg, #ffffff, ${theme.colors.neutral[50]})`,
                     cursor: isDisabled ? 'not-allowed' : 'pointer',
                     boxShadow: isSelected ? theme.shadows.lg : theme.shadows.sm,
-                    color: theme.colors.neutral[900],
-                    fontWeight: isSelected ? theme.fontWeights.semibold : theme.fontWeights.normal,
-                    opacity: selectedOption !== null && !isSelected ? 0.6 : (remainingSeconds !== null && remainingSeconds <= 0 ? 0.5 : 1),
+                    color: isCorrect ? theme.colors.success[700] : theme.colors.neutral[900],
+                    fontWeight: isCorrect || isSelected ? theme.fontWeights.semibold : theme.fontWeights.normal,
+                    opacity: revealMode
+                      ? (isCorrect ? 1 : 0.6)
+                      : selectedOption !== null && !isSelected
+                        ? 0.6
+                        : (remainingSeconds !== null && remainingSeconds <= 0 ? 0.5 : 1),
                     transition: `all ${theme.transitions.base}`,
-                    transform: isSelected ? 'scale(1.02)' : 'scale(1)',
+                    transform: isCorrect || isSelected ? 'scale(1.01)' : 'scale(1)',
                     fontFamily: 'inherit',
                     textAlign: 'left',
                     minHeight: '44px',
+                    whiteSpace: 'normal',
+                    lineHeight: 1.35,
                   }}
                 >
                   <span style={{ marginRight: theme.spacing.sm, fontWeight: theme.fontWeights.bold }}>
                     {String.fromCharCode(65 + idx)}.
                   </span>
-                  {opt}
+                  {opt} {isCorrect ? "✅" : ""}
                 </button>
               </li>
             );
@@ -389,21 +517,39 @@ export default function ParticipantApp() {
           </div>
         )}
 
-        {remainingSeconds !== null && remainingSeconds <= 0 && selectedOption === null && (
+        {revealMode && q.correct_index !== null && (
+          <div
+            role="status"
+            aria-live="polite"
+            style={{
+              marginTop: theme.spacing.lg,
+              padding: theme.spacing.md,
+              borderRadius: theme.radii.lg,
+              background: theme.colors.neutral[50],
+              border: `2px solid ${theme.colors.success[200]}`,
+              color: theme.colors.neutral[800],
+              fontWeight: theme.fontWeights.semibold,
+              textAlign: 'center',
+            }}
+          >
+            ✨ {t("correct_answer_label", { answer: q.options[q.correct_index] })}
+          </div>
+        )}
+
+        {revealMode && selectedOption === null && (
           <div
             role="alert"
             style={{
               marginTop: theme.spacing.lg,
               padding: theme.spacing.md,
               borderRadius: theme.radii.lg,
-              background: theme.colors.danger[50],
-              border: `2px solid ${theme.colors.danger[500]}`,
-              color: theme.colors.danger[700],
-              fontStyle: 'italic',
+              background: theme.colors.neutral[50],
+              border: `2px solid ${theme.colors.neutral[300]}`,
+              color: theme.colors.neutral[700],
               textAlign: 'center',
             }}
           >
-            {t("time_expired")}
+            {t("answer_phase_closed")}
           </div>
         )}
       </Card>
